@@ -11,18 +11,23 @@ uniform float uSwell;
 uniform float uWavelength;
 uniform float uPeriod;
 uniform float uIdlePhase;
+uniform float uDrop;
+uniform vec2 uOrigin;
 uniform vec2 uResolution;
 uniform vec3 uColorShadow;
 uniform vec3 uColorLift;
 uniform vec3 uColorGlow;
-const vec2 pulseOrigin=vec2(0.0,-6.0);
-float pulseRadius(float age) { return 6.0+age*1.05; }
+// Arc: the crest enters from a distant origin, so it crosses the frame almost straight.
+// Drop: it starts at an origin next to the frame, so its curvature stays visible.
+float pulseRadius(float age) { return mix(6.0,0.0,uDrop)+age*1.05; }
 float gaussian(float x,float width) { return exp(-x*x/(width*width)); }
 vec3 wave(vec2 p,float age) {
-  vec2 delta=p-pulseOrigin;
+  vec2 delta=p-uOrigin;
   float radius=length(delta);
   float front=radius-pulseRadius(age);
   float envelope=smoothstep(0.0,.35,age)*(1.0-smoothstep(5.0,7.6,age))*uImpulse;
+  // A drop ring loses height as its energy spreads over a growing circumference.
+  envelope*=mix(1.0,1.6*inversesqrt(1.0+radius*1.2),uDrop);
   // Shallow, broad leading shoulder; the trough must not read as a tube.
   float head=gaussian(front,.46);
   float trough=gaussian(front+.72,.78);
@@ -36,10 +41,10 @@ vec3 wave(vec2 p,float age) {
 }
 // After the impulse, shallow swells keep rolling out from the same origin.
 // One wavelength passes per period; the phase is accumulated on the CPU so
-// period changes do not make the rings jump.
+// period changes do not make the swells jump.
 const float idleStart=${IDLE_START.toFixed(1)};
 vec2 idleSwell(vec2 p,float t,float lag) {
-  float radius=length(p-pulseOrigin);
+  float radius=length(p-uOrigin);
   float phase=radius/uWavelength-(uIdlePhase-lag/uPeriod);
   float crest=pow(.5+.5*cos(phase*6.2831853),6.0);
   return vec2(.03,.45)*crest*smoothstep(5.5,idleStart,t)*uSwell;
@@ -56,7 +61,7 @@ float focusRadius() { return pulseRadius(min(uTime,${IMPULSE_DURATION.toFixed(1)
 // Art-directed curved focus surface follows the annular crest. A conventional
 // planar focal plane cannot keep this whole tilted ring sharp simultaneously.
 float blurRadius(vec3 world,float depth) {
-  float signedOffset=length(world.xz-pulseOrigin)-focusRadius();
+  float signedOffset=length(world.xz-uOrigin)-focusRadius();
   float radialOffset=abs(signedOffset);
   // A broad, symmetric shoulder keeps the transition even across the crest.
   // The rational falloff approaches full blur slowly, without a steep shoulder.
@@ -158,7 +163,7 @@ void main() {
   vec2 anchor=position.xz;
   vec3 event=motion(anchor,0.0);
   vec3 delayed=motion(anchor,.10);
-  vec2 delta=anchor-pulseOrigin;
+  vec2 delta=anchor-uOrigin;
   vec2 radial=delta/max(length(delta),.0001);
   vec2 drift=radial*delayed.z*.035;
   vec2 p=anchor+drift;

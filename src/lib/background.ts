@@ -42,6 +42,9 @@ const CAMERA_DISTANCE = Math.hypot(1.45, 3.6);
 const HORIZON_MARGIN = THREE.MathUtils.degToRad(9.44);
 const MAX_HALF_ANGLE = THREE.MathUtils.degToRad(12.5);
 const MIN_HALF_ANGLE = THREE.MathUtils.degToRad(3);
+const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+// Used when a screen position looks above the horizon.
+const MAX_ORIGIN_DISTANCE = 12;
 
 export function createBackground(
   canvas: HTMLCanvasElement,
@@ -75,6 +78,10 @@ export function createBackground(
   let postScene: THREE.Scene | undefined;
   let postCamera: THREE.Camera | undefined;
 
+  const raycaster = new THREE.Raycaster();
+  const screenPoint = new THREE.Vector2();
+  const groundPoint = new THREE.Vector3();
+
   const sceneColors = {
     shadow: new THREE.Color(),
     lift: new THREE.Color(),
@@ -91,6 +98,8 @@ export function createBackground(
     uWavelength: { value: 1 },
     uPeriod: { value: 1 },
     uIdlePhase: { value: 0 },
+    uDrop: { value: 1 },
+    uOrigin: { value: new THREE.Vector2() },
     uDust: { value: 1 },
     uResolution: { value: new THREE.Vector2(1, 1) },
     uColorShadow: { value: sceneColors.shadow },
@@ -113,6 +122,7 @@ export function createBackground(
     uniforms.uFocus.value = settings.focus;
     uniforms.uAperture.value = settings.aperture;
     uniforms.uImpulse.value = settings.impulse;
+    uniforms.uDrop.value = settings.shape === 'drop' ? 1 : 0;
     uniforms.uSwell.value = settings.swell;
     uniforms.uWavelength.value = settings.wavelength;
     uniforms.uPeriod.value = settings.period;
@@ -125,7 +135,6 @@ export function createBackground(
     if (!camera) return;
     const tilt = THREE.MathUtils.degToRad(settings.tilt);
     const roll = THREE.MathUtils.degToRad(settings.roll);
-    // Crop one distant arc rather than exposing the impulse center.
     // The default 37-degree roll matches the reference diagonal in portrait.
     camera.position.set(0, Math.sin(tilt) * CAMERA_DISTANCE, Math.cos(tilt) * CAMERA_DISTANCE);
     camera.lookAt(0, 0, 0);
@@ -139,6 +148,22 @@ export function createBackground(
     );
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
+    applyOrigin();
+  }
+
+  // The arc origin sits beyond the far edge. The drop origin follows a screen position,
+  // so the impact stays next to the same corner at any aspect ratio.
+  function applyOrigin(): void {
+    if (!camera) return;
+    if (settings.shape === 'arc') {
+      uniforms.uOrigin.value.set(0, -6);
+      return;
+    }
+    screenPoint.set(settings.originX, settings.originY);
+    raycaster.setFromCamera(screenPoint, camera);
+    const hit = raycaster.ray.intersectPlane(GROUND, groundPoint)
+      ?? raycaster.ray.at(MAX_ORIGIN_DISTANCE, groundPoint);
+    uniforms.uOrigin.value.set(hit.x, hit.z);
   }
 
   function render(): void {

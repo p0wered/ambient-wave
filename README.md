@@ -1,9 +1,10 @@
 # Ambient Wave
 
-A tunable Three.js background: a woven cloth surface, a circular wave impulse that plays once
-at startup, slow idle swells afterwards, floating dust and an art-directed depth of field.
-Originally built for the Hero of the [Nortlyn Bank](https://github.com/p0wered/nortlyn-bank)
-concept; the defaults reproduce that scene.
+A tunable Three.js background: a woven cloth surface, a wave impulse that plays once at startup
+(a crest spreading from a point next to the frame, or a crest from far away), slow idle swells
+afterwards, floating dust and an art-directed depth of field.
+Originally built for the Hero of the Nortlyn Bank concept. That scene uses the Arc shape with
+speed 1, 1,800 particles, a 21.94° camera tilt and a 37.24° roll.
 
 The demo page shows the background full-screen with a collapsible settings panel.
 
@@ -32,12 +33,18 @@ settings; **Reset** restores the defaults; **Replay** restarts the startup impul
 | Aperture | Strength of the depth-of-field blur. |
 | Dust glow | Brightness of the dust particles only. |
 | Speed | Playback speed of the whole animation. |
-| Impulse strength | Height and glow of the startup wave. |
+| Shape | Drop (curved crest from a nearby point) or Arc (the Nortlyn Hero crest). |
+| Strength | Height and glow of the startup impulse. |
+| Origin X, Y | Drop impact position on screen; ±1 are the frame edges (Drop only). |
 | Idle swell | Height and glow of the idle swells. |
 | Swell wavelength | Distance between idle swell crests, in scene units. |
 | Swell period | Seconds for one crest to travel one wavelength. |
 | Particles | Number of dust particles drawn, up to 4,000. |
 | Camera tilt, roll | Camera angle above the cloth and rotation around the view axis. |
+
+Drop spreads the crest from a point just outside the frame, so its curvature stays visible as it
+sweeps across. Arc starts the crest far away, so it crosses the frame almost straight.
+Changing the shape replays the impulse.
 
 ## Using the background
 
@@ -72,9 +79,12 @@ controller.dispose();
 
 ## How it works
 
-- A 300 × 300 segmented cloth mesh is displaced in the vertex shader by the circular impulse;
-  focus leaves the frame with its crest. Idle swells then roll out from the same origin. Their
-  phase is accumulated on the CPU, so changing the period does not make the rings jump.
+- A 300 × 300 segmented cloth mesh is displaced in the vertex shader by the impulse;
+  focus follows its leading crest out of the frame.
+- The drop origin is a screen position cast onto the cloth, so it stays by the same corner at
+  any aspect ratio. Its crest loses height as the ring grows.
+- Idle swells then roll out from the same origin. Their phase is accumulated on the CPU,
+  so changing the period does not make the rings jump.
 - 4,000 seeded dust anchors are generated once; the particle setting changes only the draw
   range, so lowering the count keeps the same particles.
 - A post pass applies a 64-sample depth-of-field blur and a 12-sample highlight halo.

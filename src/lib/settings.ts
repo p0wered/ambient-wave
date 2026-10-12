@@ -10,14 +10,23 @@ export type BackgroundColors = {
   glow: string;
 };
 
+// Drop: the crest spreads from a point next to the frame, like a ring from a drop on water.
+// Arc: the crest comes from a distant origin and crosses the frame almost straight.
+export type ImpulseShape = 'drop' | 'arc';
+
+export const IMPULSE_SHAPES: readonly ImpulseShape[] = ['drop', 'arc'];
+
 export type BackgroundSettings = {
   colors: BackgroundColors;
+  shape: ImpulseShape;
   intensity: number;
   focus: number;
   aperture: number;
   dust: number;
   speed: number;
   impulse: number;
+  originX: number;
+  originY: number;
   swell: number;
   wavelength: number;
   period: number;
@@ -26,7 +35,7 @@ export type BackgroundSettings = {
   roll: number;
 };
 
-export type NumericSetting = Exclude<keyof BackgroundSettings, 'colors'>;
+export type NumericSetting = Exclude<keyof BackgroundSettings, 'colors' | 'shape'>;
 
 export type SettingRange = {
   min: number;
@@ -34,25 +43,31 @@ export type SettingRange = {
   step: number;
 };
 
-// The values tuned for the Nortlyn Bank Hero. Camera angles are in degrees.
+// Colors and light match the Nortlyn Bank Hero; its arc shape also used speed 1,
+// 1,800 particles, a 21.94-degree tilt and a 37.24-degree roll. Camera angles are in degrees.
+// The drop origin is a screen position: -1 and 1 are the frame edges, so values beyond
+// them place the impact outside the frame.
 export const DEFAULT_SETTINGS: BackgroundSettings = {
   colors: {
     shadow: '#5288d3',
     lift: '#c1b7e4',
     glow: '#5d71d1',
   },
+  shape: 'drop',
   intensity: 1.1,
   focus: 0.36,
   aperture: 1.15,
   dust: 1,
-  speed: 1,
+  speed: 0.8,
   impulse: 1,
+  originX: 0.65,
+  originY: 0.05,
   swell: 1,
   wavelength: 4,
   period: 14,
-  particles: 1800,
-  tilt: 21.94,
-  roll: 37.24,
+  particles: 1400,
+  tilt: 19.5,
+  roll: 49.5,
 };
 
 export const SETTING_RANGES: Record<NumericSetting, SettingRange> = {
@@ -62,6 +77,8 @@ export const SETTING_RANGES: Record<NumericSetting, SettingRange> = {
   dust: { min: 0, max: 3, step: 0.01 },
   speed: { min: 0.1, max: 3, step: 0.05 },
   impulse: { min: 0, max: 2.5, step: 0.05 },
+  originX: { min: -2, max: 2, step: 0.05 },
+  originY: { min: -2, max: 2, step: 0.05 },
   swell: { min: 0, max: 3, step: 0.05 },
   wavelength: { min: 1.5, max: 10, step: 0.1 },
   period: { min: 4, max: 40, step: 0.5 },
@@ -91,6 +108,10 @@ export function normalizeSettings(input: unknown): BackgroundSettings {
     if (typeof value === 'string' && HEX_COLOR.test(value)) {
       settings.colors[key] = value.toLowerCase();
     }
+  }
+
+  if (IMPULSE_SHAPES.includes(source.shape as ImpulseShape)) {
+    settings.shape = source.shape as ImpulseShape;
   }
 
   for (const key of Object.keys(SETTING_RANGES) as NumericSetting[]) {

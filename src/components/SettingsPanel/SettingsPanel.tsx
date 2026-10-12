@@ -4,10 +4,12 @@ import {
   SETTING_RANGES,
   type BackgroundColors,
   type BackgroundSettings,
+  type ImpulseShape,
   type NumericSetting,
 } from '../../lib/settings.ts';
 import { ColorField } from '../ColorField/ColorField.tsx';
 import { RangeField } from '../RangeField/RangeField.tsx';
+import { SegmentedField } from '../SegmentedField/SegmentedField.tsx';
 import styles from './SettingsPanel.module.css';
 
 type NumericField = {
@@ -15,12 +17,19 @@ type NumericField = {
   label: string;
   digits?: number;
   unit?: string;
+  // Shown only for this impulse shape.
+  shape?: ImpulseShape;
 };
 
 const COLOR_FIELDS: Array<{ key: keyof BackgroundColors; label: string }> = [
   { key: 'shadow', label: 'Shadow' },
   { key: 'lift', label: 'Lift' },
   { key: 'glow', label: 'Glow' },
+];
+
+const SHAPE_OPTIONS: Array<{ value: ImpulseShape; label: string }> = [
+  { value: 'drop', label: 'Drop' },
+  { value: 'arc', label: 'Arc' },
 ];
 
 const GROUPS: Array<{ title: string; fields: NumericField[] }> = [
@@ -34,10 +43,17 @@ const GROUPS: Array<{ title: string; fields: NumericField[] }> = [
     ],
   },
   {
+    title: 'Impulse',
+    fields: [
+      { key: 'impulse', label: 'Strength' },
+      { key: 'originX', label: 'Origin X', shape: 'drop' },
+      { key: 'originY', label: 'Origin Y', shape: 'drop' },
+    ],
+  },
+  {
     title: 'Motion',
     fields: [
       { key: 'speed', label: 'Speed', unit: '×' },
-      { key: 'impulse', label: 'Impulse strength' },
       { key: 'swell', label: 'Idle swell' },
       { key: 'wavelength', label: 'Swell wavelength', digits: 1 },
       { key: 'period', label: 'Swell period', digits: 1, unit: ' s' },
@@ -159,17 +175,31 @@ export function SettingsPanel({
               <h2 className={styles.sectionTitle}>
                 {group.title}
               </h2>
-              {group.fields.map((field) => (
-                <RangeField
-                  key={field.key}
-                  label={field.label}
-                  value={settings[field.key]}
-                  range={SETTING_RANGES[field.key]}
-                  digits={field.digits}
-                  unit={field.unit}
-                  onChange={(value) => onChange({ ...settings, [field.key]: value })}
+              {group.title === 'Impulse' && (
+                <SegmentedField
+                  label="Shape"
+                  value={settings.shape}
+                  options={SHAPE_OPTIONS}
+                  onChange={(shape) => {
+                    onChange({ ...settings, shape });
+                    // The impulse has usually finished; show the new shape right away.
+                    onReplay();
+                  }}
                 />
-              ))}
+              )}
+              {group.fields
+                .filter((field) => !field.shape || field.shape === settings.shape)
+                .map((field) => (
+                  <RangeField
+                    key={field.key}
+                    label={field.label}
+                    value={settings[field.key]}
+                    range={SETTING_RANGES[field.key]}
+                    digits={field.digits}
+                    unit={field.unit}
+                    onChange={(value) => onChange({ ...settings, [field.key]: value })}
+                  />
+                ))}
             </section>
           ))}
         </div>
