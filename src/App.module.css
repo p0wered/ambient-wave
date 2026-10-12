@@ -1,0 +1,15 @@
+.app {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.title {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  color: rgb(255 255 255 / 86%);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}

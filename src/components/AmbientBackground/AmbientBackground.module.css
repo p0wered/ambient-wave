@@ -1,0 +1,23 @@
+.background {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 88% 16%, var(--ambient-glow), transparent 58%),
+    linear-gradient(145deg, var(--ambient-shadow), var(--ambient-lift));
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 103% 92%, rgb(188 183 255 / 42%), transparent 47%),
+    radial-gradient(ellipse at 90% 4%, rgb(100 153 255 / 20%), transparent 42%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
