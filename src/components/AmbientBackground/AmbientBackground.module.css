@@ -19,5 +19,6 @@
     radial-gradient(ellipse at 103% 92%, rgb(188 183 255 / 42%), transparent 47%),
     radial-gradient(ellipse at 90% 4%, rgb(100 153 255 / 20%), transparent 42%);
   mix-blend-mode: screen;
+  opacity: var(--ambient-overlay, 1);
   pointer-events: none;
 }

@@ -99,6 +99,10 @@ export function createBackground(
     uPeriod: { value: 1 },
     uIdlePhase: { value: 0 },
     uDrop: { value: 1 },
+    uCrestWidth: { value: 1 },
+    uAmbient: { value: 1 },
+    uGlow: { value: 1 },
+    uDustLevel: { value: 0 },
     uOrigin: { value: new THREE.Vector2() },
     uDust: { value: 1 },
     uResolution: { value: new THREE.Vector2(1, 1) },
@@ -127,6 +131,10 @@ export function createBackground(
     uniforms.uWavelength.value = settings.wavelength;
     uniforms.uPeriod.value = settings.period;
     uniforms.uDust.value = settings.dust;
+    uniforms.uDustLevel.value = settings.dustLevel;
+    uniforms.uCrestWidth.value = settings.crestWidth;
+    uniforms.uAmbient.value = settings.ambient;
+    uniforms.uGlow.value = settings.glow;
     particleGeometry?.setDrawRange(0, Math.round(settings.particles));
     applyCamera();
   }

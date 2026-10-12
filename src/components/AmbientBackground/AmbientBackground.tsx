@@ -62,6 +62,8 @@ export function AmbientBackground({
     '--ambient-shadow': settings.colors.shadow,
     '--ambient-lift': settings.colors.lift,
     '--ambient-glow': settings.colors.glow,
+    // The corner light overlay dims with the scene's ambient light.
+    '--ambient-overlay': Math.min(1, settings.ambient),
   } as CSSProperties;
 
   return (

@@ -20,11 +20,15 @@ export type BackgroundSettings = {
   colors: BackgroundColors;
   shape: ImpulseShape;
   intensity: number;
+  ambient: number;
+  glow: number;
   focus: number;
   aperture: number;
   dust: number;
+  dustLevel: number;
   speed: number;
   impulse: number;
+  crestWidth: number;
   originX: number;
   originY: number;
   swell: number;
@@ -43,8 +47,9 @@ export type SettingRange = {
   step: number;
 };
 
-// Colors and light match the Nortlyn Bank Hero; its arc shape also used speed 1,
-// 1,800 particles, a 21.94-degree tilt and a 37.24-degree roll. Camera angles are in degrees.
+// Colors match the Nortlyn Bank Hero. The Hero used the arc shape with ambient, glow and
+// crest width at 1, resting dust at 0.055, speed 1, 1,800 particles, a 21.94-degree tilt
+// and a 37.24-degree roll. Camera angles are in degrees.
 // The drop origin is a screen position: -1 and 1 are the frame edges, so values beyond
 // them place the impact outside the frame.
 export const DEFAULT_SETTINGS: BackgroundSettings = {
@@ -55,11 +60,15 @@ export const DEFAULT_SETTINGS: BackgroundSettings = {
   },
   shape: 'drop',
   intensity: 1.1,
+  ambient: 0.6,
+  glow: 2,
   focus: 0.36,
   aperture: 1.15,
   dust: 1,
+  dustLevel: 0.3,
   speed: 0.8,
   impulse: 1,
+  crestWidth: 1.8,
   originX: 0.65,
   originY: 0.05,
   swell: 1,
@@ -72,11 +81,15 @@ export const DEFAULT_SETTINGS: BackgroundSettings = {
 
 export const SETTING_RANGES: Record<NumericSetting, SettingRange> = {
   intensity: { min: 0, max: 2, step: 0.01 },
+  ambient: { min: 0.2, max: 1.5, step: 0.01 },
+  glow: { min: 0, max: 4, step: 0.05 },
   focus: { min: 0, max: 1, step: 0.01 },
   aperture: { min: 0, max: 2.5, step: 0.01 },
   dust: { min: 0, max: 3, step: 0.01 },
+  dustLevel: { min: 0, max: 1, step: 0.01 },
   speed: { min: 0.1, max: 3, step: 0.05 },
   impulse: { min: 0, max: 2.5, step: 0.05 },
+  crestWidth: { min: 0.5, max: 3, step: 0.05 },
   originX: { min: -2, max: 2, step: 0.05 },
   originY: { min: -2, max: 2, step: 0.05 },
   swell: { min: 0, max: 3, step: 0.05 },

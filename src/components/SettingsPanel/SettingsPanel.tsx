@@ -37,15 +37,19 @@ const GROUPS: Array<{ title: string; fields: NumericField[] }> = [
     title: 'Light',
     fields: [
       { key: 'intensity', label: 'Intensity' },
+      { key: 'ambient', label: 'Ambient light' },
+      { key: 'glow', label: 'Crest glow' },
       { key: 'focus', label: 'Focus width' },
       { key: 'aperture', label: 'Aperture' },
       { key: 'dust', label: 'Dust glow' },
+      { key: 'dustLevel', label: 'Resting dust', digits: 3 },
     ],
   },
   {
     title: 'Impulse',
     fields: [
       { key: 'impulse', label: 'Strength' },
+      { key: 'crestWidth', label: 'Crest width' },
       { key: 'originX', label: 'Origin X', shape: 'drop' },
       { key: 'originY', label: 'Origin Y', shape: 'drop' },
     ],

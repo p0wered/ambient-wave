@@ -12,6 +12,9 @@ uniform float uWavelength;
 uniform float uPeriod;
 uniform float uIdlePhase;
 uniform float uDrop;
+uniform float uCrestWidth;
+uniform float uAmbient;
+uniform float uGlow;
 uniform vec2 uOrigin;
 uniform vec2 uResolution;
 uniform vec3 uColorShadow;
@@ -24,19 +27,27 @@ float gaussian(float x,float width) { return exp(-x*x/(width*width)); }
 vec3 wave(vec2 p,float age) {
   vec2 delta=p-uOrigin;
   float radius=length(delta);
-  float front=radius-pulseRadius(age);
+  float ring=pulseRadius(age);
+  float front=radius-ring;
   float envelope=smoothstep(0.0,.35,age)*(1.0-smoothstep(5.0,7.6,age))*uImpulse;
-  // A drop ring loses height as its energy spreads over a growing circumference.
-  envelope*=mix(1.0,1.6*inversesqrt(1.0+radius*1.2),uDrop);
+  // A drop ring is born narrow and low, widens and rises as it leaves the impact, then
+  // loses height as its energy spreads over a growing circumference. A full-width crest
+  // at the origin would instead inflate as a lumpy dome. Both depend on the ring radius,
+  // so the whole ring changes together.
+  float birth=smoothstep(0.0,.9,ring);
+  envelope*=mix(1.0,birth*1.5*inversesqrt(1.0+ring*.9),uDrop);
   // Shallow, broad leading shoulder; the trough must not read as a tube.
-  float head=gaussian(front,.46);
-  float trough=gaussian(front+.72,.78);
-  float tail=gaussian(front+1.6,1.0);
+  // Crest width scales the whole profile at the same height, so wider crests are gentler.
+  float w=uCrestWidth*mix(1.0,clamp(.3+.42*ring,.3,1.0),uDrop);
+  float headWidth=.46*w,troughOffset=.72*w,troughWidth=.78*w,tailOffset=1.6*w,tailWidth=w;
+  float head=gaussian(front,headWidth);
+  float trough=gaussian(front+troughOffset,troughWidth);
+  float tail=gaussian(front+tailOffset,tailWidth);
   float height=(.085*head-.025*trough+.012*tail)*envelope;
   float light=(head+.16*tail)*envelope;
-  float slope=(-2.0*front/.2116*.085*head
-    +2.0*(front+.72)/.6084*.025*trough
-    -2.0*(front+1.6)*.012*tail)*envelope;
+  float slope=(-2.0*front/(headWidth*headWidth)*.085*head
+    +2.0*(front+troughOffset)/(troughWidth*troughWidth)*.025*trough
+    -2.0*(front+tailOffset)/(tailWidth*tailWidth)*.012*tail)*envelope;
   return vec3(height,light,slope);
 }
 // After the impulse, shallow swells keep rolling out from the same origin.
@@ -124,15 +135,16 @@ void main() {
   base=mix(base,uColorLift,smoothstep(.1,1.0,uv.x)*cool*.8);
   vec3 glowMint=min(mix(uColorGlow,vec3(1.0),.15)*vec3(1.05,.98,2.2),vec3(1.0));
   vec3 glow=mix(uColorGlow,glowMint,smoothstep(.25,1.0,uv.x));
-  vec3 color=base*(.8+diffuse*.35);
+  // Ambient scales the scene's own light; the crest glow is added on top of it.
+  vec3 color=base*(.8+diffuse*.35)*uAmbient;
   // Broad light sources persist after the crest passes through the crop.
   float mint=exp(-pow((uv.x-.94)/.39,2.0)-pow((uv.y-.86)/.65,2.0));
   float green=exp(-pow((uv.x-.22)/.65,2.0)-pow((uv.y-.72)/.34,2.0));
-  color+=mix(uColorLift,uColorGlow,.35)*.7*mint*uIntensity;
-  color+=uColorShadow*vec3(.6,.8,.16)*green*uIntensity;
-  color+=glow*event.y*(.40+diffuse*.26)*uIntensity;
-  color+=mix(uColorGlow,vec3(1.0),.15)*spec*(.03+event.y*.18)*uIntensity;
-  color+=uColorShadow*.22*fresnel;
+  color+=mix(uColorLift,uColorGlow,.35)*.7*mint*uIntensity*uAmbient;
+  color+=uColorShadow*vec3(.6,.8,.16)*green*uIntensity*uAmbient;
+  color+=glow*event.y*(.40+diffuse*.26)*uIntensity*uGlow;
+  color+=mix(uColorGlow,vec3(1.0),.15)*spec*(.03*uAmbient+event.y*.18*uGlow)*uIntensity;
+  color+=uColorShadow*.22*fresnel*uAmbient;
   // Material-bound variations survive defocus as overlapping soft patches.
   float mottling=(softNoise(vMaterial*18.0)*2.0-1.0);
   float bundles=(softNoise(vMaterial*vec2(48.0,9.0))*2.0-1.0);
@@ -159,6 +171,7 @@ varying float vCore;
 varying float vDefocus;
 varying float vTint;
 uniform float uDust;
+uniform float uDustLevel;
 void main() {
   vec2 anchor=position.xz;
   vec3 event=motion(anchor,0.0);
@@ -170,8 +183,12 @@ void main() {
   float y=clothHeight(p)+aLift+max(0.0,delayed.x)*.24;
   vec4 view=modelViewMatrix*vec4(p.x,y,p.y,1.0);
   float depth=-view.z;
-  float sharp=(.65+pow(aSeed,3.0)*2.3)*uResolution.y/850.0*3.0/max(depth,.1);
-  float b=blurRadius(vec3(p.x,y,p.y),depth)*uResolution.y;
+  // Fine dust rests on the yarn; the rest is suspended and reads as bokeh.
+  float fine=1.0-step(.08,aLift);
+  // Fine dust is drawn larger and with half the defocus, so it stays a crisp speck
+  // over a broad band instead of dissolving into faint discs.
+  float sharp=(.65+pow(aSeed,3.0)*2.3)*mix(1.0,1.4,fine)*uResolution.y/850.0*3.0/max(depth,.1);
+  float b=blurRadius(vec3(p.x,y,p.y),depth)*uResolution.y*mix(1.0,.5,fine);
   float size=clamp(sqrt(sharp*sharp+b*b*2.0),1.0,64.0);
   gl_PointSize=size;
   gl_Position=projectionMatrix*view;
@@ -179,7 +196,9 @@ void main() {
   vDefocus=clamp(b/10.0,0.0,1.0);
   vTint=aSeed;
   // Pulse lights the suspended dust; no unrelated drift or twinkling clock.
-  vBrightness=(.055+event.y*1.55+delayed.y*.40)*(.5+1.1*aSeed)*uIntensity*uDust;
+  // The resting level keeps fine dust visible between crests; the crest lights it further.
+  float rest=mix(.055,uDustLevel,fine);
+  vBrightness=(rest+event.y*1.55+delayed.y*.40)*(.5+1.1*aSeed)*uIntensity*uDust;
 }
 `;
 
@@ -254,7 +273,8 @@ void main() {
     vec3 sampleColor=texture2D(uColorTexture,clamp(vUv+offset,vec2(.001),vec2(.999))).rgb;
     halo+=sampleColor*smoothstep(.48,.9,max(sampleColor.r,max(sampleColor.g,sampleColor.b)));
   }
-  color+=halo/12.0*.14;
+  // Bright crest pixels bloom; a dimmer scene stays under the threshold.
+  color+=halo/12.0*.14*uGlow;
   color*=1.0-.13*length((vUv-.5)*vec2(.8,1.0));
   float grain=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
   gl_FragColor=vec4(color+(grain-.5)/255.0,1.0);
